@@ -44,18 +44,15 @@
 #if defined(CONFIG_STMPE811_ADC)
 #include <linux/stmpe811-adc.h>
 #endif
-<<<<<<< HEAD
 #include <linux/delay.h>
 #ifdef CONFIG_FAST_BOOT
 #include <linux/fake_shut_down.h>
 #endif
-=======
 #include "linux/charge_level.h"
 
 int ac_level = AC_CHARGE_LEVEL_DEFAULT;    // Set AC default charge level
 int usb_level  = USB_CHARGE_LEVEL_DEFAULT; // Set USB default charge level
 
->>>>>>> 8d72a84... samsung_battery: Charge level interface
 
 static char *supply_list[] = {
 	"battery",
@@ -1732,7 +1729,6 @@ charge_ok:
 		printk("Boeffla-Kernel: POWER_SUPPLY_TYPE_MAINS, using charge rate %d mA\n", ac_level);
 		if (!info->pdata->suspend_chging)
 			wake_lock(&info->charge_wake_lock);
-<<<<<<< HEAD
 #if defined(CONFIG_MACH_KONA)
 		if(mhl_connected==true)
 			battery_charge_control(info,info->pdata->chg_curr_mhl,
@@ -1741,9 +1737,8 @@ charge_ok:
 #endif
 		battery_charge_control(info, info->pdata->chg_curr_ta,
 						info->pdata->in_curr_limit);
-=======
+
 		battery_charge_control(info, ac_level, ac_level);
->>>>>>> 8d72a84... samsung_battery: Charge level interface
 		break;
 	case POWER_SUPPLY_TYPE_USB:
 		printk("Boeffla-Kernel: POWER_SUPPLY_TYPE_USB, using charge rate %d mA\n", usb_level);
