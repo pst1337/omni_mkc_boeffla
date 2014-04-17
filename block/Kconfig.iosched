@@ -90,12 +90,9 @@ config DEFAULT_IOSCHED
 	string
 	default "deadline" if DEFAULT_DEADLINE
 	default "cfq" if DEFAULT_CFQ
-<<<<<<< HEAD
-=======
 	default "bfq" if DEFAULT_BFQ
-    default "row" if DEFAULT_ROW
-    default "sio" if DEFAULT_SIO
->>>>>>> 61ca8f9... block: prepare I/O context code for BFQ-v6r2 for 3.0
+	default "row" if DEFAULT_ROW
+	default "sio" if DEFAULT_SIO
 	default "noop" if DEFAULT_NOOP
 
 endmenu
