@@ -183,9 +183,6 @@ struct i2c_client *b_client;
 #ifdef SEC_LED_SPECIFIC
 extern struct class *sec_class;
 struct device *led_dev;
-/*path : /sys/class/sec/led/led_pattern*/
-/*path : /sys/class/sec/led/led_blink*/
-/*path : /sys/class/sec/led/led_brightness*/
 int led_enable_fade;
 u8 led_intensity;
 int led_speed;
@@ -406,34 +403,6 @@ static void an30259a_start_led_pattern(int mode)
 	/* leds_set_slope_mode(client, LED_SEL, DELAY,  MAX, MID, MIN,
 		SLPTT1, SLPTT2, DT1, DT2, DT3, DT4) */
 	case CHARGING:
-		leds_on(LED_R, true, false,
-					LED_R_CURRENT / LED_DYNAMIC_CURRENT);
-		break;
-
-	case CHARGING_ERR:
-		leds_on(LED_R, true, true,
-					LED_R_CURRENT / LED_DYNAMIC_CURRENT);
-		leds_set_slope_mode(client, LED_R,
-				1, 15, 15, 0, 1, 1, 0, 0, 0, 0);
-		break;
-
-	case MISSED_NOTI:
-		leds_on(LED_B, true, true,
-					LED_B_CURRENT / LED_DYNAMIC_CURRENT);
-		leds_set_slope_mode(client, LED_B,
-					10, 15, 15, 0, 1, 10, 0, 0, 0, 0);
-		break;
-
-	case LOW_BATTERY:
-		leds_on(LED_R, true, true,
-					LED_R_CURRENT / LED_DYNAMIC_CURRENT);
-		leds_set_slope_mode(client, LED_R,
-					10, 15, 15, 0, 1, 10, 0, 0, 0, 0);
-		break;
-
-	case FULLY_CHARGED:
-		leds_on(LED_G, true, false,
-					LED_G_CURRENT / LED_DYNAMIC_CURRENT);
 		leds_on(LED_R, true, false, r_brightness);
 		leds_on(LED_G, false, false, LED_OFF);
 		leds_on(LED_B, false, false, LED_OFF);
@@ -488,6 +457,7 @@ static void an30259a_start_led_pattern(int mode)
 		break;
 
 	case POWERING:
+		leds_on(LED_R, false, false, 0);
 		leds_on(LED_G, true, true, LED_G_CURRENT);
 		leds_on(LED_B, true, true, LED_B_CURRENT);
 		leds_set_slope_mode(client, LED_G,
@@ -528,8 +498,6 @@ static void an30259a_set_led_blink(enum an30259a_led_enum led,
 	else if (led == LED_B)
 		LED_DYNAMIC_CURRENT = LED_B_CURRENT;
 
-	/* In user case, LED current is restricted */
-	brightness = (brightness * LED_DYNAMIC_CURRENT) / LED_MAX_CURRENT;
 	/* Yank555.lu : Control LED intensity (CM, Samsung, override) */
 	if (led_intensity == 40) /* Samsung stock behaviour */
 		brightness = (brightness * LED_DYNAMIC_CURRENT) / LED_MAX_CURRENT;
@@ -550,12 +518,6 @@ static void an30259a_set_led_blink(enum an30259a_led_enum led,
 	} else
 		leds_on(led, true, true, brightness);
 
-	leds_set_slope_mode(client, led, 0, 15, 15, 0,
-				(delay_on_time + AN30259A_TIME_UNIT - 1) /
-				AN30259A_TIME_UNIT,
-				(delay_off_time + AN30259A_TIME_UNIT - 1) /
-				AN30259A_TIME_UNIT,
-				0, 0, 0, 0);
 	/* Yank555.lu : Handle fading / blinking */
 	if (led_enable_fade == 1) {
 		leds_set_slope_mode(client, led, 0, (15 / led_speed), (7 / led_speed), 0,
@@ -621,19 +583,17 @@ static ssize_t store_an30259a_led_pattern(struct device *dev,
 					const char *buf, size_t count)
 {
 	int retval;
-	unsigned int mode = 0;
-	unsigned int type = 0;
+	unsigned long mode;
 	struct an30259a_data *data = dev_get_drvdata(dev);
 
-	retval = sscanf(buf, "%d %d", &mode, &type);
-
-	if (retval == 0) {
+	retval = strict_strtoul(buf, 16, &mode);
+	if (retval != 0) {
 		dev_err(&data->client->dev, "fail to get led_pattern mode.\n");
 		return count;
 	}
 
 	an30259a_start_led_pattern(mode);
-	printk(KERN_DEBUG "led pattern : %d is activated\n", mode);
+	printk(KERN_DEBUG "led pattern : %lu is activated\n", mode);
 
 	return count;
 }
@@ -682,7 +642,6 @@ static ssize_t store_an30259a_led_blink(struct device *dev,
 
 	return count;
 }
-
 
 static ssize_t show_an30259a_led_fade(struct device *dev,
                     struct device_attribute *attr, char *buf)
@@ -1121,13 +1080,14 @@ static int __devinit an30259a_probe(struct i2c_client *client,
 
 #ifdef SEC_LED_SPECIFIC
 	led_enable_fade = 1;  /* default to CM behaviour = fade */
-//	led_intensity =  0;   /* default to CM behaviour = brighter blink intensity allowed */
-	led_intensity = 40;   /* default to Samsung behaviour = normal intensity */
+	led_intensity =  0;   /* default to CM behaviour = brighter blink intensity allowed */
+//	led_intensity = 40;   /* default to Samsung behaviour = normal intensity */
 	led_speed = 1;        /* default to stock behaviour = normal blinking/fading speed */
 	led_slope_up_1 = 1;   /* default slope durations to CM behaviour */
 	led_slope_up_2 = 1;
 	led_slope_down_1 = 1;
 	led_slope_down_2 = 1;
+	
 	led_dev = device_create(sec_class, NULL, 0, data, "led");
 	if (IS_ERR(led_dev)) {
 		dev_err(&client->dev,
